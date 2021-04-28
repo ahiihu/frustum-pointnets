@@ -163,9 +163,9 @@ def extract_frustum_data(idx_filename, split, output_filename, viz=False,
     Output:
         None (will write a .pickle file to the disk)
     '''
-    dataset = kitti_object(os.path.join(ROOT_DIR,'dataset/KITTI/object'), split)
-    data_idx_list = [int(line.rstrip()) for line in open(idx_filename)]
-
+    dataset = kitti_object(os.path.join(ROOT_DIR,'dataset/KITTI/object'), split)    # dataset's filepath
+    data_idx_list = [int(line.rstrip()) for line in open(idx_filename)]     # rstrip：删除读取的每一行中的换行符
+    
     id_list = [] # int number
     box2d_list = [] # [xmin,ymin,xmax,ymax]
     box3d_list = [] # (8,3) array in rect camera coord

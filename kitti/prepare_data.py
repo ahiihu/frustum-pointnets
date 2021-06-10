@@ -2,6 +2,7 @@
 
 Author: Charles R. Qi
 Date: September 2017
+
 '''
 from __future__ import print_function
 
@@ -12,14 +13,16 @@ import cv2
 from PIL import Image
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
-sys.path.append(BASE_DIR)
-sys.path.append(os.path.join(ROOT_DIR, 'mayavi'))
+
+#sys.path.append(BASE_DIR)
+sys.path.append(os.path.join(ROOT_DIR, 'mayavi_1'))
 import kitti_util as utils
-import cPickle as pickle
+import _pickle as pickle
 from kitti_object import *
 import argparse
-
-
+#from mayavi_1.viz_util
+print(sys.path)
+print(1)
 def in_hull(p, hull):
     from scipy.spatial import Delaunay
     if not isinstance(hull,Delaunay):
@@ -40,24 +43,26 @@ def extract_pc_in_box2d(pc, box2d):
     box2d_corners[3,:] = [box2d[0],box2d[3]] 
     box2d_roi_inds = in_hull(pc[:,0:2], box2d_corners)
     return pc[box2d_roi_inds,:], box2d_roi_inds
-     
+
+
 def demo():
     import mayavi.mlab as mlab
-    from viz_util import draw_lidar, draw_lidar_simple, draw_gt_boxes3d
+    from mayavi_1 import viz_util
+    # from viz_util import draw_lidar, draw_lidar_simple, draw_gt_boxes3d
     dataset = kitti_object(os.path.join(ROOT_DIR, 'dataset/KITTI/object'))
-    data_idx = 0
+    data_idx = 4
 
     # Load data from dataset
-    objects = dataset.get_label_objects(data_idx)
+    objects = dataset.get_label_objects(data_idx)   # 返回了object3d类的数据，里面存储txt文件信息
     objects[0].print_object()
     img = dataset.get_image(data_idx)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) 
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img_height, img_width, img_channel = img.shape
     print(('Image shape: ', img.shape))
     pc_velo = dataset.get_lidar(data_idx)[:,0:3]
     calib = dataset.get_calibration(data_idx)
 
-    ## Draw lidar in rect camera coord
+    # Draw lidar in rect camera coord
     #print(' -------- LiDAR points in rect camera coordination --------')
     #pc_rect = calib.project_velo_to_rect(pc_velo)
     #fig = draw_lidar_simple(pc_rect)
@@ -163,9 +168,9 @@ def extract_frustum_data(idx_filename, split, output_filename, viz=False,
     Output:
         None (will write a .pickle file to the disk)
     '''
-    dataset = kitti_object(os.path.join(ROOT_DIR,'dataset/KITTI/object'), split)    # dataset's filepath
-    data_idx_list = [int(line.rstrip()) for line in open(idx_filename)]     # rstrip：删除读取的每一行中的换行符
-    
+    dataset = kitti_object(os.path.join(ROOT_DIR,'dataset/KITTI/object'), split)
+    data_idx_list = [int(line.rstrip()) for line in open(idx_filename)]     # 取出训练数据的索引，rstrip删除字符串后回车符
+
     id_list = [] # int number
     box2d_list = [] # [xmin,ymin,xmax,ymax]
     box3d_list = [] # (8,3) array in rect camera coord
@@ -180,15 +185,19 @@ def extract_frustum_data(idx_filename, split, output_filename, viz=False,
     pos_cnt = 0
     all_cnt = 0
     for data_idx in data_idx_list:
-        print('------------- ', data_idx)
+        print('------------- ', data_idx)   # 根据索引取出相关数据
         calib = dataset.get_calibration(data_idx) # 3 by 4 matrix
         objects = dataset.get_label_objects(data_idx)
         pc_velo = dataset.get_lidar(data_idx)
         pc_rect = np.zeros_like(pc_velo)
-        pc_rect[:,0:3] = calib.project_velo_to_rect(pc_velo[:,0:3])
-        pc_rect[:,3] = pc_velo[:,3]
+        # 将点云投影到0号相机的修正坐标系中， velo->reference->rect
+        pc_rect[:,0:3] = calib.project_velo_to_rect(pc_velo[:, 0:3])
+        pc_rect[:,3] = pc_velo[:, 3]
+
         img = dataset.get_image(data_idx)
         img_height, img_width, img_channel = img.shape
+        # 核心部分，过滤并得到图像视角下的点云数据
+        # 将点云从velo->rect->imag，其中rect to iamge是核心，相关函数维kitti_util.py/def project_rect_to_image
         _, pc_image_coord, img_fov_inds = get_lidar_in_image_fov(pc_velo[:,0:3],
             calib, 0, 0, img_width, img_height, True)
 
@@ -481,7 +490,8 @@ if __name__=='__main__':
         type_whitelist = ['Car', 'Pedestrian', 'Cyclist']
         output_prefix = 'frustum_carpedcyc_'
 
-    if args.gen_train:
+    #if args.gen_train:
+    if True:
         extract_frustum_data(\
             os.path.join(BASE_DIR, 'image_sets/train.txt'),
             'training',
